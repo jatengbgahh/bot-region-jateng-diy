@@ -113,13 +113,21 @@ def register_handlers(app: Application, timeout_wrapper: Optional[Callable] = No
         )
 
     async def cmd_jobs_reload(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-        """/jobs_reload — Sinkronisasi scheduler dengan database."""
+        """/jobs_reload — Sinkronisasi scheduler & daftar command menu dengan database."""
+        from utils.command_registry import sync_commands_to_db, sync_telegram_menu_from_db
+
         # Sinkronisasi deklaratif bila ada class report baru
         new_synced = scheduler_db.sync_declared_report_schedules()
+        cmd_stats = sync_commands_to_db()
+        menu_count = await sync_telegram_menu_from_db(ctx.bot)
         if reload_jobs_fn:
             total = reload_jobs_fn(ctx.application)
             extra_msg = f" (ditemukan & didaftarkan {new_synced} report baru)" if new_synced > 0 else ""
-            await update.message.reply_text(f"🔄 Berhasil memuat ulang {total} slot jadwal aktif dari database SQLite{extra_msg}.")
+            await update.message.reply_text(
+                f"🔄 Berhasil memuat ulang {total} slot jadwal aktif{extra_msg} "
+                f"serta memperbarui {menu_count} command di Menu Button Telegram "
+                f"(+{cmd_stats['added']} / ~{cmd_stats['updated']} / -{cmd_stats['removed']})."
+            )
         else:
             await update.message.reply_text("⚠️ Fungsi reload jadwal belum terpasang.")
 
@@ -168,9 +176,14 @@ def register_handlers(app: Application, timeout_wrapper: Optional[Callable] = No
 
         await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
-    app.add_handler(CommandHandler("jobs", _T(cmd_jobs)))
-    app.add_handler(CommandHandler("jobs_toggle", _T(cmd_jobs_toggle)))
-    app.add_handler(CommandHandler("jobs_edit", _T(cmd_jobs_edit)))
-    app.add_handler(CommandHandler("jobs_reload", _T(cmd_jobs_reload)))
-    app.add_handler(CommandHandler("jobs_run", _T(cmd_jobs_run)))
-    app.add_handler(CommandHandler("jobs_logs", _T(cmd_jobs_logs)))
+    from utils.command_registry import TelegramCommand
+
+    for cmd_obj in (
+        TelegramCommand("jobs", cmd_jobs, "Manajemen jadwal report dinamis (SQLite)", category="SCHEDULER"),
+        TelegramCommand("jobs_toggle", cmd_jobs_toggle, "Aktifkan / nonaktifkan slot jadwal report (on/off)", category="SCHEDULER"),
+        TelegramCommand("jobs_edit", cmd_jobs_edit, "Ubah jam/hari jadwal report tanpa restart bot", category="SCHEDULER"),
+        TelegramCommand("jobs_reload", cmd_jobs_reload, "Muat ulang jadwal & sinkronkan menu command dari DB", category="SCHEDULER"),
+        TelegramCommand("jobs_run", cmd_jobs_run, "Jalankan manual slot jadwal report sekarang juga", category="SCHEDULER"),
+        TelegramCommand("jobs_logs", cmd_jobs_logs, "Lihat riwayat eksekusi jadwal report terakhir", category="SCHEDULER"),
+    ):
+        cmd_obj.register(app, timeout_wrapper=_T)

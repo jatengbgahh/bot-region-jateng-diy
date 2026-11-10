@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any, Callable
 
 from telegram import Update
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler, ContextTypes
 
 import db
@@ -149,4 +150,4 @@ class ReportKategoriPaket(BaseReport):
 def register_handlers(app, timeout_wrapper=None, kirim_foto_fn=None):
     _T = timeout_wrapper if timeout_wrapper is not None else (lambda f: f)
     report = ReportKategoriPaket(kirim_foto_fn=kirim_foto_fn)
-    app.add_handler(CommandHandler("kategoripaket", _T(report.handle)))
+    TelegramCommand("kategoripaket", report.handle).register(app, timeout_wrapper=_T)

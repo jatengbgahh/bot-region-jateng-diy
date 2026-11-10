@@ -799,7 +799,15 @@ class BaseReport:
             await update.message.reply_text(done_txt)
 
     def register(self, app, timeout_wrapper: Optional[Callable] = None):
-        """Daftarkan CommandHandler ke `app` Telegram dan kembalikan fungsi handler-nya."""
-        _T = timeout_wrapper if timeout_wrapper is not None else (lambda f: f)
-        app.add_handler(CommandHandler(self.name, _T(self.handle)))
-        return self.handle
+        """Daftarkan objek TelegramCommand & CommandHandler ke `app` Telegram dan kembalikan fungsi handler-nya."""
+        from utils.command_registry import TelegramCommand
+
+        cmd_obj = TelegramCommand(
+            command=self.name,
+            handler=self.handle,
+            description=getattr(self, "description", "") or getattr(self, "title", ""),
+            category="REPORT",
+            use_timeout=True,
+        )
+        self.command_object = cmd_obj
+        return cmd_obj.register(app, timeout_wrapper=timeout_wrapper)

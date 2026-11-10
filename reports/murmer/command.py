@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any
 
 from telegram import InputFile, Update
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler, ContextTypes
 
 from reports.base import BaseReport, ReportOutput, sub_report
@@ -164,5 +165,5 @@ def register_handlers(app, timeout_wrapper=None):
 
     report = ReportMurmer()
     cmd_murmer = report.handle
-    app.add_handler(CommandHandler("murmer", _T(cmd_murmer)))
+    TelegramCommand("murmer", cmd_murmer).register(app, timeout_wrapper=_T)
     return cmd_murmer

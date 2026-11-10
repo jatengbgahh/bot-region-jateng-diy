@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from telegram.constants import ParseMode
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler
 
 logger = logging.getLogger(__name__)
@@ -174,4 +175,4 @@ def register_handlers(app, timeout_wrapper=None):
             logger.exception("Error /jadwal")
             await update.message.reply_text(f"❌ Error:\n{html.escape(str(e))[:600]}")
 
-    app.add_handler(CommandHandler("jadwal", _T(cmd_jadwal)))
+    TelegramCommand("jadwal", cmd_jadwal).register(app, timeout_wrapper=_T)

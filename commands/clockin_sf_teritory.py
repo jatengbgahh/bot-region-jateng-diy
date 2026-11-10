@@ -11,6 +11,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from telegram import InputFile, Update
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler, ContextTypes
 
 from config import GROUP_ID
@@ -256,6 +257,6 @@ def register_handlers(app, timeout_wrapper=None):
     _T = timeout_wrapper if timeout_wrapper is not None else (lambda f: f)
     cmd_clockin_sf_teritory = ReportClockinSFTeritory().handle
     cmd_homepass_raw = ReportHomepassRaw().handle
-    app.add_handler(CommandHandler("clockin_sf_teritory", _T(cmd_clockin_sf_teritory)))
-    app.add_handler(CommandHandler("homepass_raw", _T(cmd_homepass_raw)))
+    TelegramCommand("clockin_sf_teritory", cmd_clockin_sf_teritory).register(app, timeout_wrapper=_T)
+    TelegramCommand("homepass_raw", cmd_homepass_raw).register(app, timeout_wrapper=_T)
     return cmd_clockin_sf_teritory, cmd_homepass_raw

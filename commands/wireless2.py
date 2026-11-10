@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any, Callable
 
 from telegram import Update
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler, ContextTypes
 
 from config import GROUP_ID
@@ -251,6 +252,6 @@ def register_handlers(
     )
     cmd_wireless2 = rep_w2.handle
     cmd_wirelesschannel2 = rep_wc2.handle
-    app.add_handler(CommandHandler("wireless2", _T(cmd_wireless2)))
-    app.add_handler(CommandHandler("wirelesschannel2", _T(cmd_wirelesschannel2)))
+    TelegramCommand("wireless2", cmd_wireless2).register(app, timeout_wrapper=_T)
+    TelegramCommand("wirelesschannel2", cmd_wirelesschannel2).register(app, timeout_wrapper=_T)
     return cmd_wireless2, cmd_wirelesschannel2

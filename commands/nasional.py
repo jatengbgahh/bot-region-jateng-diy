@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any, Callable
 
 from telegram import Update
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler, ContextTypes
 
 from reports.base import BaseReport, ReportOutput, sub_report
@@ -240,5 +241,5 @@ def register_handlers(
         kirim_foto_fn=kirim_foto_fn,
     )
     cmd_nasional = report.handle
-    app.add_handler(CommandHandler("nasional", _T(cmd_nasional)))
+    TelegramCommand("nasional", cmd_nasional).register(app, timeout_wrapper=_T)
     return cmd_nasional

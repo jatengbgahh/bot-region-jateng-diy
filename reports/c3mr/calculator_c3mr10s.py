@@ -140,7 +140,8 @@ def _cek_mutu_segment(seg_map: dict, bp_date: date, wajib: bool = True):
     NB: nama tabel di pesan mengikuti aturan CVM M-1 (lihat db.query_c3mr_segment).
     """
     bulan_cvm = bp_date - relativedelta(months=1)
-    tabel = f"ih_cb_cvm_prfl_mm_{bulan_cvm.strftime('%Y%m')}"
+    # nama tabel yang benar-benar dipakai db.query_c3mr_segment (CVM belum ada -> fallback month-1)
+    tabel = db.tabel_atau_bulan_lalu(f"ih_cb_cvm_prfl_mm_{bulan_cvm.strftime('%Y%m')}")
 
     if not seg_map:
         pesan = f"Tabel {tabel} kosong / tidak bisa dibaca — mapping segment tidak tersedia."

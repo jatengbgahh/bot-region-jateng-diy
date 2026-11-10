@@ -188,6 +188,12 @@ from commands import salahtagging as cmd_salahtagging_mod
 from commands import salahtagging_wok_old as cmd_salahtagging_wok_old_mod
 from commands import jobs_manager as cmd_jobs_manager_mod
 from utils import scheduler_db
+from utils.command_registry import (
+    CommandRegistry,
+    TelegramCommand,
+    post_init_sync_commands,
+    sync_commands_to_db,
+)
 
 # ── Logging: ke console DAN ke file (biar kejadian scheduler/error ada jejaknya,
 # bukan cuma nongol di layar lalu hilang). File dirotasi supaya tidak membengkak
@@ -3895,10 +3901,13 @@ def main():
                                read_timeout=60, write_timeout=60, pool_timeout=60))
         .get_updates_request(_RetryRequest(connect_timeout=30, read_timeout=60,
                                            write_timeout=60, pool_timeout=30))
+        .post_init(post_init_sync_commands)
         .build()
     )
 
     # Penampung error global (termasuk penanganan Conflict lintas mesin).
+    CommandRegistry.clear()
+    CommandRegistry.install_app_hook(app)
     app.add_error_handler(_error_handler)
 
     # ── Filter chat yang diblokir ──────────────────────────────────────────
@@ -3921,15 +3930,15 @@ def main():
     # ── Daftarkan command handlers ─────────────────────────────────────────
     # Perintah RINGAN (langsung balas, tanpa query berat) — tidak perlu penangkal
     # timeout.
-    app.add_handler(CommandHandler("start",         cmd_start))
-    app.add_handler(CommandHandler("menu",          cmd_menu))
-    app.add_handler(CommandHandler("status",        cmd_status))
-    app.add_handler(CommandHandler("modequery",     cmd_modequery))
-    app.add_handler(CommandHandler("rajawali",      cmd_rajawali))
-    app.add_handler(CommandHandler("dbstatus",      cmd_dbstatus))
-    app.add_handler(CommandHandler("dbinfo",        cmd_dbinfo))
-    app.add_handler(CommandHandler("target",        cmd_target))
-    app.add_handler(CommandHandler("gp",            cmd_gp))
+    TelegramCommand("start", cmd_start, use_timeout=False).register(app)
+    TelegramCommand("menu", cmd_menu, use_timeout=False).register(app)
+    TelegramCommand("status", cmd_status, use_timeout=False).register(app)
+    TelegramCommand("modequery", cmd_modequery, use_timeout=False).register(app)
+    TelegramCommand("rajawali", cmd_rajawali, use_timeout=False).register(app)
+    TelegramCommand("dbstatus", cmd_dbstatus, use_timeout=False).register(app)
+    TelegramCommand("dbinfo", cmd_dbinfo, use_timeout=False).register(app)
+    TelegramCommand("target", cmd_target, use_timeout=False).register(app)
+    TelegramCommand("gp", cmd_gp, use_timeout=False).register(app)
 
     # Perintah BERAT (query DB + render, bisa lama) — dibungkus penangkal timeout
     # (_dengan_batas_waktu). Kalau prosesnya nyangkut (mis. VPN/DB setengah
@@ -3937,44 +3946,44 @@ def main():
     # diberi kabar, bukan menggantung diam. Berkat concurrent_updates, perintah
     # ini juga bisa jalan bersamaan tanpa saling menunggu.
     _T = _dengan_batas_waktu
-    app.add_handler(CommandHandler("closing",       _T(cmd_closing)))
-    app.add_handler(CommandHandler("closinghadoop", _T(cmd_closing_hadoop)))
-    app.add_handler(CommandHandler("dailyreps",     _T(cmd_daily)))
-    app.add_handler(CommandHandler("closingdaily",  _T(cmd_closing_daily)))
-    app.add_handler(CommandHandler("liveupdate",    _T(cmd_liveupdate)))
-    app.add_handler(CommandHandler("liveupdateutoip", _T(cmd_liveupdateutoip)))
-    app.add_handler(CommandHandler("liveupdatebk",  _T(cmd_liveupdatebk)))
-    app.add_handler(CommandHandler("dailyre",       _T(cmd_dailyre)))
-    app.add_handler(CommandHandler("closingsql",    _T(cmd_closing_sql)))
-    app.add_handler(CommandHandler("closingutoip",  _T(cmd_closing_utoip)))
-    app.add_handler(CommandHandler("closingbk",     _T(cmd_closingbk)))
-    app.add_handler(CommandHandler("djp",           _T(cmd_djp)))
-    app.add_handler(CommandHandler("djpcsv",        _T(cmd_djpcsv)))
-    app.add_handler(CommandHandler("mbcsv",         _T(cmd_mbcsv)))
-    app.add_handler(CommandHandler("c3mr",          _T(cmd_c3mr)))
-    app.add_handler(CommandHandler("c3mr10s",       _T(cmd_c3mr10s)))
-    app.add_handler(CommandHandler("c3mrnew",       _T(cmd_c3mrnew)))
-    app.add_handler(CommandHandler("payment",       _T(cmd_payment)))
-    app.add_handler(CommandHandler("caps",          _T(cmd_caps)))
-    app.add_handler(CommandHandler("pranpcall",     _T(cmd_pranpcall)))
-    app.add_handler(CommandHandler("pranpcagent",   _T(cmd_pranpcagent)))
-    app.add_handler(CommandHandler("moretensi",     _T(cmd_moretensi)))
-    app.add_handler(CommandHandler("pranpcsp",      _T(cmd_pranpcsp)))
-    app.add_handler(CommandHandler("pranpcprio",    _T(cmd_pranpcprio)))
-    app.add_handler(CommandHandler("dod",           _T(cmd_dod)))
-    app.add_handler(CommandHandler("agresif",       _T(cmd_agresif)))
-    app.add_handler(CommandHandler("wireless",      _T(cmd_wireless)))
-    app.add_handler(CommandHandler("djpprio",       _T(cmd_djpprio)))
-    app.add_handler(CommandHandler("promo",         _T(cmd_promo)))
-    app.add_handler(CommandHandler("pdd",           _T(cmd_pdd)))
-    app.add_handler(CommandHandler("addon",         _T(cmd_addon)))
-    app.add_handler(CommandHandler("klaim",         _T(cmd_klaim)))
-    app.add_handler(CommandHandler("sf",            _T(cmd_sf)))
+    TelegramCommand("closing", cmd_closing).register(app, timeout_wrapper=_T)
+    TelegramCommand("closinghadoop", cmd_closing_hadoop).register(app, timeout_wrapper=_T)
+    TelegramCommand("dailyreps", cmd_daily).register(app, timeout_wrapper=_T)
+    TelegramCommand("closingdaily", cmd_closing_daily).register(app, timeout_wrapper=_T)
+    TelegramCommand("liveupdate", cmd_liveupdate).register(app, timeout_wrapper=_T)
+    TelegramCommand("liveupdateutoip", cmd_liveupdateutoip).register(app, timeout_wrapper=_T)
+    TelegramCommand("liveupdatebk", cmd_liveupdatebk).register(app, timeout_wrapper=_T)
+    TelegramCommand("dailyre", cmd_dailyre).register(app, timeout_wrapper=_T)
+    TelegramCommand("closingsql", cmd_closing_sql).register(app, timeout_wrapper=_T)
+    TelegramCommand("closingutoip", cmd_closing_utoip).register(app, timeout_wrapper=_T)
+    TelegramCommand("closingbk", cmd_closingbk).register(app, timeout_wrapper=_T)
+    TelegramCommand("djp", cmd_djp).register(app, timeout_wrapper=_T)
+    TelegramCommand("djpcsv", cmd_djpcsv).register(app, timeout_wrapper=_T)
+    TelegramCommand("mbcsv", cmd_mbcsv).register(app, timeout_wrapper=_T)
+    TelegramCommand("c3mr", cmd_c3mr).register(app, timeout_wrapper=_T)
+    TelegramCommand("c3mr10s", cmd_c3mr10s).register(app, timeout_wrapper=_T)
+    TelegramCommand("c3mrnew", cmd_c3mrnew).register(app, timeout_wrapper=_T)
+    TelegramCommand("payment", cmd_payment).register(app, timeout_wrapper=_T)
+    TelegramCommand("caps", cmd_caps).register(app, timeout_wrapper=_T)
+    TelegramCommand("pranpcall", cmd_pranpcall).register(app, timeout_wrapper=_T)
+    TelegramCommand("pranpcagent", cmd_pranpcagent).register(app, timeout_wrapper=_T)
+    TelegramCommand("moretensi", cmd_moretensi).register(app, timeout_wrapper=_T)
+    TelegramCommand("pranpcsp", cmd_pranpcsp).register(app, timeout_wrapper=_T)
+    TelegramCommand("pranpcprio", cmd_pranpcprio).register(app, timeout_wrapper=_T)
+    TelegramCommand("dod", cmd_dod).register(app, timeout_wrapper=_T)
+    TelegramCommand("agresif", cmd_agresif).register(app, timeout_wrapper=_T)
+    TelegramCommand("wireless", cmd_wireless).register(app, timeout_wrapper=_T)
+    TelegramCommand("djpprio", cmd_djpprio).register(app, timeout_wrapper=_T)
+    TelegramCommand("promo", cmd_promo).register(app, timeout_wrapper=_T)
+    TelegramCommand("pdd", cmd_pdd).register(app, timeout_wrapper=_T)
+    TelegramCommand("addon", cmd_addon).register(app, timeout_wrapper=_T)
+    TelegramCommand("klaim", cmd_klaim).register(app, timeout_wrapper=_T)
+    TelegramCommand("sf", cmd_sf).register(app, timeout_wrapper=_T)
     cmd_5so, cmd_7so = sf_momentum.register_handlers(app, _T, _get_cutoff_tabel)
 
-    app.add_handler(CommandHandler("performance",   _T(cmd_performance)))
-    app.add_handler(CommandHandler("childps",       _T(childps_bot.cmd_childps)))
-    app.add_handler(CommandHandler("leads",         _T(cmd_leads)))
+    TelegramCommand("performance", cmd_performance).register(app, timeout_wrapper=_T)
+    TelegramCommand("childps", childps_bot.cmd_childps).register(app, timeout_wrapper=_T)
+    TelegramCommand("leads", cmd_leads).register(app, timeout_wrapper=_T)
     app.add_handler(MessageHandler(filters.Document.ALL, _T(handle_file)))
 
     #command kirim ke wa
@@ -4102,6 +4111,7 @@ def main():
         trigger_job_fn=_trigger_job_manual,
     )
 
+    sync_commands_to_db()
     _sinkronisasi_scheduler(app)
     logger.info("Bot Monitoring RE Jateng-DIY aktif (+ SQLite dynamic scheduler)")
     app.run_polling()

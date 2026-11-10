@@ -20,6 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from telegram import InputFile
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler
 
 from .jadwal import _kumpulkan_jadwal, REPORT_PER_PERINTAH
@@ -233,4 +234,4 @@ def register_handlers(app, timeout_wrapper=None):
             logger.exception("Error /reports_schedule")
             await update.message.reply_text(f"❌ Error:\n{str(e)[:600]}")
 
-    app.add_handler(CommandHandler("reports_schedule", _T(cmd_reports_schedule)))
+    TelegramCommand("reports_schedule", cmd_reports_schedule).register(app, timeout_wrapper=_T)

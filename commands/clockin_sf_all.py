@@ -14,6 +14,7 @@ from datetime import date
 from typing import Any
 
 from telegram import Update
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler, ContextTypes
 
 from commands.clockin_sf_teritory import BATAS_CAPTION, _file_homepass, _kirim, _tanggal
@@ -102,5 +103,5 @@ def register_handlers(app, timeout_wrapper=None):
     """Daftarkan /clockin_sf_all. Return cmd_clockin_sf_all (dipakai scheduler & csv_report_runner)."""
     _T = timeout_wrapper if timeout_wrapper is not None else (lambda f: f)
     cmd = ReportClockinSFAll().handle
-    app.add_handler(CommandHandler("clockin_sf_all", _T(cmd)))
+    TelegramCommand("clockin_sf_all", cmd).register(app, timeout_wrapper=_T)
     return cmd

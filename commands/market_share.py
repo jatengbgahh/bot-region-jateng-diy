@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable
 
 from telegram import Update
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler, ContextTypes
 
 from config import GROUP_ID, REPORT_GROUP_ID, TOPIC_IDS
@@ -472,6 +473,6 @@ def register_handlers(
             except Exception:
                 logger.exception(f"[JADWAL:{label}] Notifikasi gagal tidak terkirim")
 
-    app.add_handler(CommandHandler("ms", _T(cmd_ms)))
-    app.add_handler(CommandHandler("msbranch", _T(cmd_msbranch)))
+    TelegramCommand("ms", cmd_ms).register(app, timeout_wrapper=_T)
+    TelegramCommand("msbranch", cmd_msbranch).register(app, timeout_wrapper=_T)
     return cmd_ms, cmd_msbranch

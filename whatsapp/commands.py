@@ -9,6 +9,7 @@ pengiriman laporan ada di senders.py.
 import logging
 from datetime import datetime
 
+from utils.command_registry import TelegramCommand
 from telegram.ext import CommandHandler
 
 import db
@@ -161,6 +162,6 @@ def register_commands(app, kirim_laporan_sql_func, timeout_wrapper,
             logger.exception("Error /agresif_wa")
             await update.message.reply_text(f"❌ Error kirim ke WhatsApp:\n`{clean_wa_error(e)}`", parse_mode="Markdown")
 
-    app.add_handler(CommandHandler("liveupdate_wa", _T(cmd_liveupdate_wa)))
-    app.add_handler(CommandHandler("closingsql_wa", _T(cmd_closing_sql_wa)))
-    app.add_handler(CommandHandler("agresif_wa", _T(cmd_agresif_wa)))
+    TelegramCommand("liveupdate_wa", cmd_liveupdate_wa).register(app, timeout_wrapper=_T)
+    TelegramCommand("closingsql_wa", cmd_closing_sql_wa).register(app, timeout_wrapper=_T)
+    TelegramCommand("agresif_wa", cmd_agresif_wa).register(app, timeout_wrapper=_T)
