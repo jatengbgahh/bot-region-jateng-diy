@@ -1,0 +1,183 @@
+CATATAN: semua file otomasi Rajawali kini ada di folder utils/. Jalankan dari ROOT proyek (mis. python utils/rajawali_auto.py).
+        Data kerja runtime disimpan di folder storage/ (storage/logs, storage/state, storage/locks, storage/sql_packets, storage/downloads).
+
+OTOMASI REPORT PAGI LEWAT PRISMA + SQL CONSOLE RAJAWALI
+=========================================================
+
+Berkas:
+  rajawali_auto.py     runner end-to-end (buka Prisma -> PIN -> Rajawali -> login -> SQL Console ->
+                       query -> export -> generate report -> kirim)
+  rajawali_rekam.py    perekam interaksi (klik + tombol khusus) untuk mengajari runner langkah UI
+  rajawali_ui.py       modul inti: cari jendela, tangkap layar, OCR Windows, klik, keyboard
+  rajawali_inspect.py  pemeriksa elemen UI Automation (hanya baca)
+  djp_homepass.py      ubah detail-homepass_*.xlsx -> tabel DJP (definisi: Kunjungan Terakhir terisi)
+  utils
+ajawali_auto.bat    peluncur
+
+CARA KERJA
+  Prisma tidak membuka isi jendelanya ke Windows UI Automation, jadi runner "melihat layar":
+  tangkap layar jendela Prisma -> OCR bawaan Windows -> cari teks (mis. "Export", "SQL Console",
+  "Showing ... rows") -> klik di posisinya. Jendela dimaksimalkan dulu dan posisi dihitung relatif
+  jendela, jadi resolusi/ukuran layar server yang berbeda tidak masalah.
+
+SEKALI SAJA (SETUP)
+  1. Simpan PIN Prisma dan login Rajawali ke file .env (baris PRISMA_PIN, RAJAWALI_USER, RAJAWALI_PASS):
+        python utils/rajawali_auto.py --atur-pin
+        python utils/rajawali_auto.py --atur-login
+     Atau tulis manual di .env:  PRISMA_PIN=123456  (tanpa spasi/tanda kutip).
+     Kalau kosong, runner berhenti di layar PIN/login dan MENUNGGU kamu mengisinya (maks 10-15 menit).
+     PERHATIAN: .env berisi PIN/password dalam teks biasa — jangan dibagikan / di-commit, dan pastikan
+     menyimpan PIN untuk otomasi diizinkan kebijakan kantor (layar Prisma: "User activities may be recorded").
+  2. SQL Console dibuka otomatis: avatar pojok kanan atas -> "SQL Console" (modal, URL tidak berubah).
+     Login Rajawali otomatis lewat form "login manual" (bukan SSO). Password diketik pelan per karakter
+     (kolom password menjatuhkan karakter bila cepat); setelah username ditekan Esc untuk menutup dropdown
+     riwayat username. Kalau isi kolom Username tidak sesuai, kedua kolom dikosongkan & login dibatalkan.
+     Rekaman (rajawali_rekam.py / --pakai-rekaman) hanya perlu bila tata letak Rajawali berubah.
+  Uji alur UI tanpa query berat:  python utils/rajawali_auto.py --tanpa-blok --hanya query --query uji
+     (SELECT NOW() -> export -> storage\downloads\<tgl>\uji.zip)
+
+TIAP PAGI
+  python utils/rajawali_auto.py              -> query + export + report (dry-run, TIDAK dikirim; hasil di
+                                          storage\downloads\<YYYYMMDD>\out_pagi dan out_5so7so)
+  python utils/rajawali_auto.py --kirim      -> sama, lalu kirim ke grup koordinasi
+  Pilihan:
+    --tanggal 25-10-2026               tanggal laporan (default kemarin)
+    --hanya query | --hanya report     jalankan sebagian
+    --query sfo,iod_202610             hanya query tertentu (nasional_murmer, sfo, iod_<bulan lalu>, iod_<bulan ini>)
+
+  Query yang dijalankan (satu per satu, berhenti di error pertama, tidak diulang otomatis karena
+  tiap run tercatat & memakai kuota Console):
+    nasional_murmer  -> nasional + murmer (agregat)
+    sfo              -> 5SO/7SO (master SF, order AGENCY, DJP)
+    iod_<bulan lalu>, iod_<bulan ini> -> ordering detail Jateng NEW SALES (closing, dod, agresif, wireless)
+  DJP bulan ini diambil dari file detail-homepass terbaru (Downloads atau D:\Kerjaan\hasil gabungan data\data\results).
+
+MODE QUERY DI BOT (langsung / rajawali / auto)
+  Laporan TERJADWAL dan COMMAND MANUAL (/liveupdate, /closingsql, /5so, ...) ikut mode yang dipilih: query
+  langsung ke MySQL (VPN) atau lewat Rajawali Dashboard. Command lewat Rajawali hasilnya dikirim ke chat
+  tempat command diketik (plus salinan ke grup koordinasi seperti biasa); argumen selain tanggal diabaikan.
+    /modequery                -> lihat mode sekarang
+    /modequery langsung       -> MySQL langsung (perilaku lama, default config MODE_QUERY)
+    /modequery rajawali       -> laporan yang didukung lewat Rajawali; laporan lain DILEWATI
+    /modequery auto           -> langsung bila DB terjangkau, kalau tidak lewat Rajawali
+    /rajawali [DD-MM-YYYY] [closingsql,dod,...]  -> paksa lewat Rajawali apa pun modenya, kirim ke chat ini
+  Didukung lewat Rajawali: liveupdate, closingsql, dod, nasional, agresif, wireless2, wirelesschannel2, murmer,
+  5so, 7so, c3mr, c3mrnew, c3mrnewch, c3mr10s, c3mrsvp (query c3mr_sql.py ±11 menit; /c3mrnew
+  menambah query bagian U ±4 menit untuk lampiran CSV pelanggan unpaid, sama seperti bot).
+  caps (caps_sql.py, H-2, ±10 detik; /caps tetap wajib tanggal). liveupdate selalu query baru (dashboard_hourly_sales, data jam berjalan, ±1 menit), tidak dipakai ulang.
+  (addon, pdd, homepass, klaim: tetap jalur langsung; leads tidak butuh MySQL, selalu jalan.)
+  Query panjang dipindah Console ke panel "Runs": runner mengekspor dari BARIS RUN MILIKNYA (SQL cocok, status
+  Done), dan isi file divalidasi per jenis query. Kalau Console dipakai orang lain bersamaan, hasil yang
+  salah ditolak (tidak disimpan).
+  Slot 07:00 mengambil query nasional_murmer + iod; slot 07:30 & 08:15 memakai ulang export hari itu
+  (--pakai-ada), sfo diquery di slot 08:15. Hasil dikirim ke topic yang sama dengan jadwal biasa.
+  Syarat: bot jalan di PC yang sama dengan Prisma, desktop aktif (tidak terkunci), PIN & login di .env.
+  WhatsApp (/liveupdate_wa, /closingsql_wa, /agresif_wa, manual & JADWAL_LAPORAN_WA) juga ikut mode ini: hasil
+  dry-run runner dikirim ke WA lewat adapter yang sama (urutan.json). Hanya satu otomasi Prisma berjalan
+  sekaligus (kunci rajawali_auto.lock); runner lain menunggu giliran.
+  Mode tersimpan di mode_query.json. Setelah update kode, bot perlu di-restart sekali.
+  Runner manual setara:  python utils/rajawali_auto.py --only closingsql,dod,nasional --pakai-ada [--kirim --topic SALES]
+
+BLOK MOUSE & KEYBOARD SELAMA BERJALAN
+  - Default: semua input dari luar (mouse/keyboard fisik DAN Chrome Remote Desktop) diblok selama
+    langkah otomasi di Prisma, supaya klik/ketikan orang tidak mengacaukan proses. Input dari program
+    sendiri tetap jalan. Blok dilepas otomatis saat: selesai, error, menunggu kamu isi PIN/login, atau
+    program ditutup. Bagian generate/kirim report tidak memblok input.
+  - Butuh hak Administrator: jalankan utils
+ajawali_auto.bat (otomatis minta "Run as administrator").
+    Tanpa admin, runner tetap jalan tapi TANPA blok (ada peringatan di log).
+  - Blok TIDAK terus-menerus: setiap kali runner menunggu (halaman dimuat, OCR, query berjalan, unduhan)
+    blok dilepas beberapa detik lalu dipasang lagi. Jendela lepas inilah pintu darurat lewat CRD,
+    karena "Send Ctrl+Alt+Del" dari Chrome Remote Desktop IKUT TERBLOK.
+  - PINTU DARURAT (program berhenti -> blok langsung lepas):
+      1. Tekan Ctrl+Shift+Q BERULANG KALI (fisik atau lewat CRD) sampai program berhenti, biasanya
+         dalam beberapa detik, saat jendela lepas berikutnya.
+      2. Buat file bernama STOP_OTOMASI di folder bot ini (mis. dari PC lain lewat share folder).
+      3. Ctrl+Alt+Del di keyboard FISIK (aturan Windows, selalu bisa).
+      4. Otomatis: kalau input terblok tanpa jeda lebih dari 120 detik (maks_blok_detik di
+         rajawali_auto.json), runner dianggap macet dan berhenti sendiri.
+    Saat jendela lepas, gerakan mouse/ketikan kamu memang sampai ke layar, jadi jangan klik-klik
+    di Prisma kecuali untuk Ctrl+Shift+Q.
+  - Uji dulu: jalankan sebagai admin  ->  python utils/rajawali_auto.py --uji-blok 30
+    (selama 30 detik: blok 3 detik, lepas 3 detik, berulang; coba Ctrl+Shift+Q dari CRD).
+  - Matikan blok: --tanpa-blok
+  - Task Scheduler di server: centang "Run with highest privileges" dan "Run only when user is logged on".
+
+SYARAT DI SERVER
+  - Desktop harus aktif & tidak terkunci saat runner jalan (OCR butuh layar terlihat). Kalau lewat RDP,
+    jangan minimize / disconnect jendela RDP selama berjalan (layar jadi hitam -> OCR gagal).
+  - Bahasa OCR mengikuti bahasa Windows; Inggris/Indonesia sudah cukup.
+  - Paket Python: pywinauto, pyperclip, psutil, keyring, pynput, winrt-Windows.Media.Ocr (+ winrt-*).
+  - Penjaga: SQL selain SELECT/WITH (INSERT/UPDATE/DELETE/DROP/...) ditolak sebelum dijalankan.
+
+LOG: rajawali_auto.log
+
+DIAGNOSA DI PC/SERVER LAIN (resolusi/skala/bahasa berbeda)
+  1. Buka Prisma + halaman Rajawali (login atau dashboard), lalu jalankan:  python utils/diagnosa_rajawali.py
+     -> tidak mengklik apa pun; menulis diagnosa_rajawali_<waktu>.png + .txt (resolusi, DPI, bahasa OCR, teks terbaca).
+  2. Bila runner gagal menemukan form login / menu profil, otomatis tersimpan
+     rajawali_gagal_login_<waktu>.png/.txt atau rajawali_gagal_menu_profil_<waktu>.png/.txt.
+  3. Lewat RDP: jangan minimize / disconnect jendela RDP saat otomasi jalan (layar jadi hitam, OCR tak terbaca).
+
+ALUR UI & PENGULANGAN OTOMATIS (rajawali_auto.py)
+  1. Buka Prisma (tidak membuka jendela baru bila sudah terbuka) -> isi PIN bila terkunci.
+  2. Buka ULANG URL dashboard di tab Rajawali (address bar, bukan F5, supaya sesi habis/401 ikut tersegarkan).
+  3. Tunggu halaman SELESAI dimuat: layar harus diam selama "stabil_detik" (default 8 dtk). SQL Console tidak disentuh
+     sebelum itu, supaya reload susulan tidak membuat query macet.
+  4. Halaman login (sesi habis) -> login dari .env, lalu tunggu selesai dimuat lagi. Dashboard (sesi masih berlaku) -> lanjut.
+  5. Menu profil -> SQL Console -> Ctrl+A di editor -> tempel query -> Ctrl+Enter -> tunggu selesai -> Export.
+  Gagal di tahap mana pun: diulang dari awal (langkah 2) sampai "maks_ulang" kali (default 3) per tahap/query.
+  TIDAK diulang: login ditolak (agar akun tidak terkunci), SQL berisi perintah tulis, query melewati batas waktu.
+  Bukti tiap kegagalan (png + teks OCR): folder rajawali_bukti/ (dihapus otomatis setelah 14 hari).
+  Semua angka bisa diubah lewat rajawali_auto.json: maks_ulang, stabil_detik, batas_muat_detik, hari_simpan_bukti.
+
+UI AUTOMATION (sejak 28-10-2026) — cara utama, OCR jadi cadangan
+  Prisma memblokir --remote-debugging-port, tapi isi halaman Rajawali terbaca lewat UI Automation Windows
+  (pywinauto), lengkap dengan id elemen HTML. Id ini tidak terpengaruh watermark, resolusi, zoom, atau posisi jendela.
+    Login      : #username, #password  -> fokus dipindah langsung & dipastikan, isi Username dibaca balik;
+                 password hanya diketik bila fokus terbukti di kolom Password (kalau tidak: kolom dikosongkan, batal).
+    Menu profil: daftar ikon header berisi #v3MenuSearch, #v3WhatsNew, lalu avatar (item terakhir) -> "SQL Console".
+    Console    : terbuka bila #sqlcText (editor SQL) muncul. Id lain: sqlcRun, sqlcRunBg, sqlcJobsBtn ("Runs N"), sqlcMsg.
+  Log menandai jalur yang dipakai: "... (UI Automation)". Bila elemen tak ketemu (mis. Rajawali di-update),
+  runner otomatis kembali ke cara OCR seperti sebelumnya.
+
+MODE LATAR BELAKANG (query lewat UI Automation, sejak 28-10-2026)
+  Setelah SQL Console terbuka, query dijalankan tanpa mouse/keyboard: SQL diisi langsung ke editor (SetValue),
+  Run & Export di-"klik" lewat Invoke, status dibaca dari elemen (#sqlcMsg "Running… / Run finished (done): …",
+  teks "Showing … rows • … s", #sqlcExport). PC boleh dipakai; blok input hanya saat buka Prisma/PIN/login.
+  Catatan penting:
+    - Chromium memperlambat halaman bila jendela Prisma TERTUTUP PENUH (hasil & unduhan tertunda). Opsi startup
+      untuk mematikannya dibuang Prisma. Karena itu selama menunggu, Prisma ditampilkan di atas ±1 detik tiap ~8 detik
+      TANPA mengambil fokus keyboard, dan tetap terlihat selama Export/unduhan, lalu diturunkan ke belakang lagi.
+    - Tiap Invoke (Run, Export) Chromium mengaktifkan jendelanya sendiri; jendela yang sedang kamu pakai langsung
+      dikembalikan ke depan. Saat itu beberapa huruf ketikanmu bisa sempat masuk ke Prisma.
+    - Query yang dilempar ke background ("Sent to the background") diexport dari panel Runs dengan cara OCR
+      (Prisma dibawa ke depan sebentar), karena panel utama masih menampilkan hasil lama.
+    - Layar terkunci / RDP terputus: Chromium juga menganggap jendela tak terlihat -> jangan kunci layar saat jalan.
+
+
+--------------------------------------------------------------------------------
+TAMBAHAN 28-10-2026: SCRAPING SELA + FILE HOMEPASS + REPORT CLOCK-IN SF TERITORY
+--------------------------------------------------------------------------------
+Default --laporan sekarang "pagi,5so7so,clockin". Urutan kirim: report pagi (7) -> 5SO -> 7SO -> file
+detail-homepass mentah (caption "Raw Data Clockin Homepass MTD <tgl>") -> Report Clock-in SF Teritory
+(gambar, teks, lalu Excel).
+
+1. SCRAPING (otomatis, sebelum langkah Rajawali; hanya bila 5so/7so/homepass_raw/clockin diminta)
+   Menjalankan modul scraping internal utils.sela_scraper:
+     DIGIPOS_SF_FROM=<tgl 1 bulan laporan>  DIGIPOS_SF_TO=<tanggal laporan>  DIGIPOS_SF_DELAY=0.5  DIGIPOS_SF_SIZE=200
+     python -m utils.sela_scraper --auto
+   Hasil: storage\sela\data\results\<hari ini>\upload_generator\detail-homepass_<dari>_sd_<sampai>.xlsx
+   - Login SELA (SSO + CAPTCHA) tetap manual kalau sesi tersimpan habis (program scraping menunggu 10 menit).
+   - Pengaturan di storage\state\rajawali_auto.json: scraping_delay, scraping_size, scraping_headless,
+     batas_scraping_detik.
+   - --lewati-scraping : pakai file homepass yang sudah ada (--djp-file atau yang terbaru).
+   - --pakai-ada       : bila file hasil scraping hari ini sudah ada, dipakai ulang.
+2. QUERY RAJAWALI untuk 5SO/7SO sekarang hanya: database_sf (bulan ini & lalu) + DJP bulan lalu. Ordering memakai
+   export iod_* yang sama dengan closingsql (tidak di-query ulang); DJP bulan ini dari hasil scraping.
+3. REPORT CLOCK-IN SF TERITORY di-generate 100% di Python (reports\clockin_sf_teritory\generator.py) dan dirender
+   lewat Chrome headless (Playwright). Daftar SF Teritory diambil langsung dari file Excel SharePoint (SF_TERITORY_URL
+   di .env atau cache storage\cache\sf_teritory_jateng_cache.xlsx).
+4. Command bot: /clockin_sf_teritory [DD-MM-YYYY] dan /homepass_raw [DD-MM-YYYY] (file homepass dicari dari folder hasil
+   scraping / Downloads: yang berakhiran _sd_<tanggal>.xlsx, atau yang terbaru).
+5. Hanya sebagian:  --only 5so,7so,homepass_raw   atau   --only clockin_sf_teritory   (tanpa query Rajawali).

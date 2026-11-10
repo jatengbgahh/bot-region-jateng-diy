@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geocoding Desa / Kecamatan / Kab-Kota — Jateng-DIY</title>
+<style>html,body{background:#0B1220;margin:0;}</style>
+<script src="xlsx.full.min.js"></script>
+<script src="boundaries.js"></script>
+<style>
+  :root{
+    --bg:#0B1220;
+    --bg-panel:#111B2E;
+    --bg-panel-2:#0E1728;
+    --line:#233047;
+    --amber:#FFAA00;
+    --amber-dim:#8a6002;
+    --red:#FF2D2D;
+    --text:#E8EDF6;
+    --text-dim:#8FA0BC;
+    --green:#37D67A;
+    --mono: 'SF Mono', 'Consolas', 'Menlo', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:980px; margin:0 auto; padding:32px 20px 80px;}
+  header{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; flex-wrap:wrap; gap:8px;}
+  header h1{font-size:20px; margin:0; font-weight:700; letter-spacing:.2px;}
+  header h1 span{color:var(--amber);}
+  header .tag{font-size:12px; color:var(--text-dim); font-family:var(--mono);}
+  .sub{color:var(--text-dim); font-size:13.5px; margin:0 0 28px; line-height:1.5;}
+  .grid-badge{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-family:var(--mono); color:var(--text-dim); background:var(--bg-panel-2); border:1px solid var(--line); padding:3px 8px; border-radius:20px;}
+
+  .step{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin-bottom:16px; position:relative;
+  }
+  .step.disabled{opacity:.4; pointer-events:none;}
+  .step-head{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .step-num{
+    width:24px; height:24px; border-radius:50%; background:var(--bg-panel-2); border:1px solid var(--amber-dim);
+    color:var(--amber); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; font-family:var(--mono); flex-shrink:0;
+  }
+  .step-title{font-size:14.5px; font-weight:600;}
+  .step-desc{font-size:12.5px; color:var(--text-dim); margin:2px 0 0 34px;}
+
+  #dropzone{
+    margin-top:14px; border:1.5px dashed var(--line); border-radius:8px; padding:34px 20px;
+    text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  #dropzone:hover, #dropzone.drag{ border-color:var(--amber); background:rgba(255,170,0,0.04); }
+  #dropzone .icon{font-size:26px; margin-bottom:8px; opacity:.8;}
+  #dropzone .main-txt{font-size:13.5px; font-weight:600;}
+  #dropzone .sub-txt{font-size:12px; color:var(--text-dim); margin-top:4px;}
+  input[type=file]{display:none;}
+
+  .file-chip{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--bg-panel-2); border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin-top:14px; font-size:13px;
+  }
+  .file-chip .name{font-family:var(--mono); color:var(--amber);}
+  .file-chip button{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px; text-decoration:underline;}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:12px;}
+  th,td{padding:7px 10px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;}
+  th{color:var(--text-dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.4px; position:sticky; top:0; background:var(--bg-panel);}
+  tr:hover td{background:rgba(255,255,255,0.02);}
+  .table-scroll{overflow:auto; max-height:280px; border:1px solid var(--line); border-radius:8px;}
+  .new-col{color:var(--amber);}
+
+  .field-row{display:flex; gap:14px; margin-top:14px; flex-wrap:wrap;}
+  .field{flex:1; min-width:180px;}
+  .field label{display:block; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
+  select{
+    width:100%; background:var(--bg-panel-2); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:6px; font-size:13px; font-family:inherit;
+  }
+  select:focus{outline:1px solid var(--amber);}
+  .detect-note{font-size:11px; color:var(--green); margin-top:6px; font-family:var(--mono);}
+  .warn-note{font-size:11.5px; color:var(--red); margin-top:8px; line-height:1.5;}
+
+  button.primary{
+    background:var(--amber); color:#1a1204; border:none; padding:11px 22px; border-radius:7px;
+    font-size:13.5px; font-weight:700; cursor:pointer; margin-top:16px; letter-spacing:.2px;
+  }
+  button.primary:hover{background:#ffb833;}
+  button.primary:disabled{background:var(--bg-panel-2); color:var(--text-dim); cursor:not-allowed;}
+  button.secondary{
+    background:none; border:1px solid var(--line); color:var(--text); padding:10px 20px; border-radius:7px;
+    font-size:13px; cursor:pointer; margin-top:16px; margin-left:8px;
+  }
+  button.secondary:hover{border-color:var(--amber); color:var(--amber);}
+
+  .progress-wrap{margin-top:16px; display:none;}
+  .progress-bar-bg{height:6px; background:var(--bg-panel-2); border-radius:4px; overflow:hidden;}
+  .progress-bar-fill{height:100%; background:var(--amber); width:0%; transition:width .12s;}
+  .progress-txt{font-size:11.5px; color:var(--text-dim); margin-top:6px; font-family:var(--mono);}
+
+  .stat-row{display:flex; gap:12px; margin:16px 0; flex-wrap:wrap;}
+  .stat{flex:1; min-width:130px; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:8px; padding:14px 16px;}
+  .stat .num{font-size:22px; font-weight:700; font-family:var(--mono);}
+  .stat .lbl{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; margin-top:2px;}
+  .stat.ok .num{color:var(--green);}
+  .stat.near .num{color:var(--amber);}
+  .stat.miss .num{color:var(--red);}
+
+  footer{text-align:center; color:var(--text-dim); font-size:11.5px; margin-top:30px; font-family:var(--mono);}
+
+  #loadingOverlay{
+    position:fixed; inset:0; background:var(--bg); z-index:999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+  }
+  .spinner{
+    width:32px; height:32px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--amber);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  #loadingOverlay .txt{font-size:13px; color:var(--text-dim); font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="txt">Memuat data batas wilayah (~41MB, sekali saja)…</div>
+</div>
+<div class="wrap">
+  <header>
+    <h1>Peta<span>Wilayah</span> — Geocoding Desa/Kec/Kab-Kota</h1>
+    <span class="grid-badge">● 8.997 desa/kelurahan · Jateng-DIY</span>
+  </header>
+  <p class="sub">Upload data koordinat (excel/csv apa saja, asal ada kolom longitude &amp; latitude) → tool ini mencocokkan tiap titik ke poligon batas administrasi resmi (desa/kelurahan, kecamatan, kab/kota) secara offline di browser kamu. Tidak ada data yang dikirim ke server manapun.</p>
+
+  <!-- STEP 1: UPLOAD -->
+  <div class="step" id="step1">
+    <div class="step-head"><div class="step-num">1</div><div class="step-title">Upload file data koordinat</div></div>
+    <div class="step-desc">Format .xlsx, .xls, atau .csv — kolom bebas, tidak perlu diseragamkan dulu.</div>
+    <div id="dropzone">
+      <div class="icon">⬆</div>
+      <div class="main-txt">Klik untuk pilih file, atau drag &amp; drop di sini</div>
+      <div class="sub-txt">.xlsx / .xls / .csv</div>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    <div class="file-chip" id="fileChip" style="display:none;">
+      <span>File: <span class="name" id="fileName"></span> · <span id="fileMeta"></span></span>
+      <button id="clearFile">Ganti file</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: MAPPING KOLOM -->
+  <div class="step disabled" id="step2">
+    <div class="step-head"><div class="step-num">2</div><div class="step-title">Konfirmasi kolom longitude &amp; latitude</div></div>
+    <div class="step-desc">Tool sudah coba menebak otomatis — cek dulu sebelum lanjut, sesuaikan kalau salah.</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Kolom Longitude (X / Bujur)</label>
+        <select id="lonSelect"></select>
+      </div>
+      <div class="field">
+        <label>Kolom Latitude (Y / Lintang)</label>
+        <select id="latSelect"></select>
+      </div>
+    </div>
+    <div class="detect-note" id="detectNote"></div>
+    <div class="table-scroll" id="previewTableWrap" style="margin-top:14px;"></div>
+    <div class="warn-note" id="warnNote" style="display:none;"></div>
+    <button class="primary" id="btnProcess">Proses Mapping</button>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-txt" id="progressTxt">Memproses...</div>
+    </div>
+  </div>
+
+  <!-- STEP 3: HASIL -->
+  <div class="step disabled" id="step3">
+    <div class="step-head"><div class="step-num">3</div><div class="step-title">Hasil mapping</div></div>
+    <div class="stat-row" id="statRow"></div>
+    <div class="table-scroll" id="resultTableWrap"></div>
+    <button class="primary" id="btnDownload">⬇ Download hasil (.xlsx)</button>
+    <button class="secondary" id="btnDownloadCsv">Download .csv</button>
+  </div>
+
+  <footer>Referensi batas wilayah: shapefile DESA-KECAMATAN JATENG DIY · Diproses 100% lokal di browser, tidak ada upload ke server.</footer>
+</div>
+
+<script>
+(function(){
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.remove();
+
+  const B = window.BOUNDARY_DATA;
+  const CELL = B.cellSize;
+  const FEATS = B.features;
+
+  // ---------- Point-in-polygon helpers ----------
+  function pointInRing(x, y, ring){
+    let inside = false;
+    for (let i=0, j=ring.length-1; i<ring.length; j=i++){
+      const xi=ring[i][0], yi=ring[i][1];
+      const xj=ring[j][0], yj=ring[j][1];
+      const intersect = ((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+  function pointInPolyRings(x,y,rings){
+    if (!pointInRing(x,y,rings[0])) return false;
+    for (let k=1;k<rings.length;k++){ if (pointInRing(x,y,rings[k])) return false; }
+    return true;
+  }
+  function pointInFeature(x,y,feat){
+    const bb = feat.bbox;
+    if (x<bb[0]||x>bb[2]||y<bb[1]||y>bb[3]) return false;
+    for (const poly of feat.poly){ if (pointInPolyRings(x,y,poly)) return true; }
+    return false;
+  }
+  function haversine(lon1,lat1,lon2,lat2){
+    const R=6371000, toRad=Math.PI/180;
+    const dLat=(lat2-lat1)*toRad, dLon=(lon2-lon1)*toRad;
+    const a=Math.sin(dLat/2)**2 + Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)**2;
+    return 2*R*Math.asin(Math.sqrt(a));
+  }
+  function candidatesForCell(gx,gy){
+    return B.grid[gx+'_'+gy] || [];
+  }
+  function matchPoint(x,y){
+    if (isNaN(x)||isNaN(y)) return {status:'NO_COORD'};
+    const gx = Math.floor(x/CELL), gy = Math.floor(y/CELL);
+    let cand = candidatesForCell(gx,gy);
+    for (const i of cand){
+      if (pointInFeature(x,y,FEATS[i])) return {status:'EXACT', feat:FEATS[i]};
+    }
+    // expand 3x3
+    const set = new Set(cand);
+    for (let dx=-1; dx<=1; dx++){
+      for (let dy=-1; dy<=1; dy++){
+        if (dx===0&&dy===0) continue;
+        for (const i of candidatesForCell(gx+dx,gy+dy)) set.add(i);
+      }
+    }
+    for (const i of set){
+      if (pointInFeature(x,y,FEATS[i])) return {status:'EXACT', feat:FEATS[i]};
+    }
+    // fallback: nearest centroid among expanded set first, else brute force
+    let pool = set.size ? Array.from(set) : null;
+    let best=null, bestD=Infinity;
+    const source = pool && pool.length ? pool.map(i=>FEATS[i]) : FEATS;
+    for (const f of source){
+      const d = haversine(x,y,f.cen[0],f.cen[1]);
+      if (d<bestD){ bestD=d; best=f; }
+    }
+    if (best && bestD <= 5000) return {status:'NEAREST', feat:best, dist:Math.round(bestD)};
+    if (best) return {status:'FAR', feat:best, dist:Math.round(bestD)};
+    return {status:'NOT_FOUND'};
+  }
+
+  // ---------- State ----------
+  let rawRows = [];
+  let headers = [];
+  let fileName = '';
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileChip = document.getElementById('fileChip');
+  const fileNameEl = document.getElementById('fileName');
+  const fileMetaEl = document.getElementById('fileMeta');
+  const clearFileBtn = document.getElementById('clearFile');
+  const step2 = document.getElementById('step2');
+  const step3 = document.getElementById('step3');
+  const lonSelect = document.getElementById('lonSelect');
+  const latSelect = document.getElementById('latSelect');
+  const detectNote = document.getElementById('detectNote');
+  const previewTableWrap = document.getElementById('previewTableWrap');
+  const warnNote = document.getElementById('warnNote');
+  const btnProcess = document.getElementById('btnProcess');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressTxt = document.getElementById('progressTxt');
+  const statRow = document.getElementById('statRow');
+  const resultTableWrap = document.getElementById('resultTableWrap');
+  const btnDownload = document.getElementById('btnDownload');
+  const btnDownloadCsv = document.getElementById('btnDownloadCsv');
+
+  dropzone.addEventListener('click', ()=>fileInput.click());
+  dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+  dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e=>{
+    e.preventDefault(); dropzone.classList.remove('drag');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e=>{
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+  clearFileBtn.addEventListener('click', ()=>{
+    fileChip.style.display='none';
+    fileInput.value='';
+    step2.classList.add('disabled');
+    step3.classList.add('disabled');
+  });
+
+  function handleFile(file){
+    fileName = file.name;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const data = new Uint8Array(e.target.result);
+      let wb;
+      try{
+        wb = XLSX.read(data, {type:'array'});
+      }catch(err){
+        alert('Gagal membaca file. Pastikan formatnya .xlsx, .xls, atau .csv yang valid.');
+        return;
+      }
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      rawRows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      if (!rawRows.length){
+        alert('File terbaca tapi tidak ada baris data.');
+        return;
+      }
+      headers = Object.keys(rawRows[0]);
+      fileNameEl.textContent = fileName;
+      fileMetaEl.textContent = rawRows.length.toLocaleString('id-ID') + ' baris · ' + headers.length + ' kolom';
+      fileChip.style.display='flex';
+      setupMapping();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function guessColumn(patterns){
+    const lower = headers.map(h=>String(h).toLowerCase());
+    for (const p of patterns){
+      const idx = lower.findIndex(h=>h===p);
+      if (idx>-1) return headers[idx];
+    }
+    for (const p of patterns){
+      const idx = lower.findIndex(h=>h.includes(p));
+      if (idx>-1) return headers[idx];
+    }
+    return null;
+  }
+
+  function setupMapping(){
+    step2.classList.remove('disabled');
+    step3.classList.add('disabled');
+    lonSelect.innerHTML = headers.map(h=>`<option value="${h}">${h}</option>`).join('');
+    latSelect.innerHTML = headers.map(h=>`<option value="${h}">${h}</option>`).join('');
+
+    const lonGuess = guessColumn(['longitude','long','lon','bujur','lng','x']);
+    const latGuess = guessColumn(['latitude','lat','lintang','y']);
+    if (lonGuess) lonSelect.value = lonGuess;
+    if (latGuess) latSelect.value = latGuess;
+
+    if (lonGuess && latGuess){
+      detectNote.textContent = `✓ Terdeteksi otomatis — Longitude: "${lonGuess}", Latitude: "${latGuess}". Cek kolom preview di bawah, ganti dropdown kalau kurang tepat.`;
+    } else {
+      detectNote.textContent = '⚠ Tidak bisa menebak otomatis, silakan pilih manual di dropdown di atas.';
+    }
+
+    renderPreview();
+    lonSelect.addEventListener('change', renderPreview);
+    latSelect.addEventListener('change', renderPreview);
+  }
+
+  function renderPreview(){
+    const lonCol = lonSelect.value, latCol = latSelect.value;
+    const sample = rawRows.slice(0,5);
+    let html = '<table><thead><tr>';
+    headers.forEach(h=>{
+      const cls = (h===lonCol||h===latCol) ? 'new-col' : '';
+      html += `<th class="${cls}">${h}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    sample.forEach(r=>{
+      html += '<tr>';
+      headers.forEach(h=>{
+        const cls = (h===lonCol||h===latCol) ? 'new-col' : '';
+        html += `<td class="${cls}">${r[h]}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    previewTableWrap.innerHTML = html;
+
+    // quick sanity check on bounds using first N rows
+    const b = B.bounds; // [minx,miny,maxx,maxy]
+    let outCount = 0, checked = 0;
+    for (let i=0;i<Math.min(50, rawRows.length); i++){
+      const x = parseCoord(rawRows[i][lonCol]);
+      const y = parseCoord(rawRows[i][latCol]);
+      if (isNaN(x)||isNaN(y)) continue;
+      checked++;
+      if (x<b[0]-1||x>b[2]+1||y<b[1]-1||y>b[3]+1) outCount++;
+    }
+    if (checked>0 && outCount/checked > 0.5){
+      warnNote.style.display='block';
+      warnNote.textContent = '⚠ Sebagian besar koordinat sample di luar wilayah Jateng-DIY. Kemungkinan kolom longitude/latitude tertukar, atau data memang di luar cakupan referensi ini — cek kembali sebelum lanjut proses.';
+    } else {
+      warnNote.style.display='none';
+    }
+  }
+
+  function parseCoord(raw){
+    if (raw===null||raw===undefined||raw==='') return NaN;
+    let s = String(raw).trim();
+    s = s.replace(/[°\s]/g,'');
+    if (s.indexOf(',')>-1 && s.indexOf('.')>-1){
+      s = s.replace(/,/g,'');
+    } else if (s.indexOf(',')>-1){
+      s = s.replace(',', '.');
+    }
+    return parseFloat(s);
+  }
+
+  let resultRows = [];
+
+  btnProcess.addEventListener('click', function(){
+    const lonCol = lonSelect.value, latCol = latSelect.value;
+    if (lonCol===latCol){
+      alert('Kolom longitude dan latitude tidak boleh sama.');
+      return;
+    }
+    btnProcess.disabled = true;
+    progressWrap.style.display='block';
+    resultRows = new Array(rawRows.length);
+    let i = 0;
+    const chunkSize = 400;
+    const stats = {EXACT:0, NEAREST:0, FAR:0, NOT_FOUND:0, NO_COORD:0};
+
+    function step(){
+      const end = Math.min(i+chunkSize, rawRows.length);
+      for (; i<end; i++){
+        const row = rawRows[i];
+        const x = parseCoord(row[lonCol]);
+        const y = parseCoord(row[latCol]);
+        const m = matchPoint(x,y);
+        stats[m.status] = (stats[m.status]||0)+1;
+        const out = Object.assign({}, row);
+        if (m.feat){
+          out['KAB_KOTA_HASIL'] = m.feat.k;
+          out['KECAMATAN_HASIL'] = m.feat.c;
+          out['DESA_HASIL'] = m.feat.d;
+          out['KODE_DESA_HASIL'] = m.feat.id;
+        } else {
+          out['KAB_KOTA_HASIL'] = '';
+          out['KECAMATAN_HASIL'] = '';
+          out['DESA_HASIL'] = '';
+          out['KODE_DESA_HASIL'] = '';
+        }
+        let statusLabel = '';
+        if (m.status==='EXACT') statusLabel = 'Cocok (dalam batas)';
+        else if (m.status==='NEAREST') statusLabel = `Estimasi terdekat (~${m.dist}m di luar batas)`;
+        else if (m.status==='FAR') statusLabel = `Terlalu jauh (~${(m.dist/1000).toFixed(1)}km, di luar cakupan)`;
+        else if (m.status==='NO_COORD') statusLabel = 'Koordinat kosong/tidak valid';
+        else statusLabel = 'Tidak ditemukan';
+        out['STATUS_MATCH'] = statusLabel;
+        resultRows[i] = out;
+      }
+      const pct = Math.round((i/rawRows.length)*100);
+      progressFill.style.width = pct+'%';
+      progressTxt.textContent = `Memproses ${i.toLocaleString('id-ID')} / ${rawRows.length.toLocaleString('id-ID')} baris (${pct}%)`;
+      if (i<rawRows.length){
+        setTimeout(step, 0);
+      } else {
+        finishProcessing(stats);
+      }
+    }
+    setTimeout(step, 10);
+  });
+
+  function finishProcessing(stats){
+    progressTxt.textContent = 'Selesai.';
+    btnProcess.disabled = false;
+    step3.classList.remove('disabled');
+
+    const total = rawRows.length;
+    const okN = stats.EXACT||0;
+    const nearN = stats.NEAREST||0;
+    const missN = (stats.FAR||0)+(stats.NOT_FOUND||0)+(stats.NO_COORD||0);
+    statRow.innerHTML = `
+      <div class="stat ok"><div class="num">${okN.toLocaleString('id-ID')}</div><div class="lbl">Cocok langsung</div></div>
+      <div class="stat near"><div class="num">${nearN.toLocaleString('id-ID')}</div><div class="lbl">Estimasi terdekat</div></div>
+      <div class="stat miss"><div class="num">${missN.toLocaleString('id-ID')}</div><div class="lbl">Tidak ditemukan</div></div>
+      <div class="stat"><div class="num">${total.toLocaleString('id-ID')}</div><div class="lbl">Total baris</div></div>
+    `;
+
+    const newCols = ['KAB_KOTA_HASIL','KECAMATAN_HASIL','DESA_HASIL','KODE_DESA_HASIL','STATUS_MATCH'];
+    const allCols = headers.concat(newCols);
+    const sample = resultRows.slice(0,50);
+    let html = '<table><thead><tr>';
+    allCols.forEach(h=>{
+      const cls = newCols.includes(h) ? 'new-col' : '';
+      html += `<th class="${cls}">${h}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    sample.forEach(r=>{
+      html += '<tr>';
+      allCols.forEach(h=>{
+        const cls = newCols.includes(h) ? 'new-col' : '';
+        html += `<td class="${cls}">${r[h]}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    resultTableWrap.innerHTML = html;
+    if (resultRows.length>50){
+      resultTableWrap.innerHTML += `<div style="padding:8px 4px; font-size:11.5px; color:var(--text-dim);">Menampilkan 50 dari ${resultRows.length.toLocaleString('id-ID')} baris. Download untuk lihat semua.</div>`;
+    }
+  }
+
+  btnDownload.addEventListener('click', function(){
+    const ws = XLSX.utils.json_to_sheet(resultRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Hasil Mapping');
+    const outName = fileName.replace(/\.[^.]+$/,'') + '_mapped.xlsx';
+    XLSX.writeFile(wb, outName);
+  });
+
+  btnDownloadCsv.addEventListener('click', function(){
+    const ws = XLSX.utils.json_to_sheet(resultRows);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName.replace(/\.[^.]+$/,'') + '_mapped.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+})();
+</script>
+</body>
+</html>

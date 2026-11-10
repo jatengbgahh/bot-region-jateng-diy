@@ -1,0 +1,33 @@
+python-telegram-bot==22.8
+python-dotenv>=1.0.0
+httpx==0.28.1
+# pandas 2.2.3 / matplotlib 3.10.0 tidak punya wheel untuk Python 3.14 (jadi harus compile & gagal)
+pandas==2.2.3; python_version < "3.14"
+pandas==2.3.3; python_version >= "3.14"
+openpyxl==3.1.4
+matplotlib==3.10.0; python_version < "3.14"
+matplotlib==3.10.7; python_version >= "3.14"
+Pillow>=12.2.0
+requests==2.32.3
+mysql-connector-python==9.7.0
+python-dateutil==2.9.0.post0
+pdfplumber==0.11.10
+pymupdf==1.28.2
+pywin32==311; platform_system == "Windows"
+playwright==1.56.0
+cryptography>=42.0.0
+
+# --- UI automation Rajawali (rajawali_ui.py / rajawali_auto.py) — khusus Windows ---
+pywinauto==0.6.9; platform_system == "Windows"
+psutil==7.2.2
+pyperclip==1.11.0
+keyring==25.7.0
+pynput==1.8.2; platform_system == "Windows"
+# OCR bawaan Windows (Windows.Media.Ocr) lewat WinRT
+winrt-runtime==4.0.3; platform_system == "Windows"
+winrt-Windows.Foundation==4!10.0.28000.2705; platform_system == "Windows"
+winrt-Windows.Foundation.Collections==4!10.0.28000.2705; platform_system == "Windows"
+winrt-Windows.Globalization==4!10.0.28000.2705; platform_system == "Windows"
+winrt-Windows.Graphics.Imaging==4!10.0.28000.2705; platform_system == "Windows"
+winrt-Windows.Media.Ocr==4!10.0.28000.2705; platform_system == "Windows"
+winrt-Windows.Storage.Streams==4!10.0.28000.2705; platform_system == "Windows"

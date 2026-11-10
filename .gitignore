@@ -1,0 +1,54 @@
+# ============================================================
+#  .gitignore — WHITELIST
+#  Prinsip: abaikan SEMUA file, lalu izinkan hanya kode & template
+#  yang jelas aman. File data pelanggan/SF (CSV/XLSX/PKL/DB/ZIP)
+#  otomatis TIDAK ikut ter-commit.
+# ============================================================
+
+# --- Abaikan semua, tapi tetap telusuri folder (supaya whitelist di subfolder bisa jalan)
+*
+!*/
+
+# ============================================================
+#  BOLEH di-commit: kode, skrip, dokumentasi, & template HTML
+# ============================================================
+!.gitignore
+!*.py
+!requirements.txt
+!*.ps1
+!*.bat
+!*.txt
+!*.md
+!*.pdf
+!resources/performance/SF_Performance_Report_22.html
+!resources/geo/GeocodingJatengDIY/index.html
+!resources/geo/GeocodingJatengDIY/xlsx.full.min.js
+
+# ============================================================
+#  TETAP DILARANG, walau cocok pola whitelist di atas
+#  (harus di BAWAH whitelist supaya menimpanya)
+# ============================================================
+
+# Rahasia: token bot, password DB, cookie FMC, password dashboard, API key.
+# Seluruh rahasia disimpan di .env (yang di-commit hanya .env.example).
+config_local.py
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Skrip sementara / sekali pakai
+scratch_*
+
+# Folder berisi runtime storage, cache, database SQLite, log, atau sesi browser
+/storage/
+/build/
+/dist/
+auth_session/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.claude/
