@@ -1077,155 +1077,53 @@ async def cmd_dbinfo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """/menu — tampilkan semua fitur bot secara ringkas."""
-    teks = (
-        "📋 *MENU BOT MONITORING RE JATENG-DIY*\n\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "📦 *KPRO (Upload File)*\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "• Upload file `target...xlsx` → simpan target\n"
-        "• Upload file KPRO → laporan hourly RE\n"
-        "• `/closing DD-MM-YYYY` → closing KPRO\n\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "🗄️ *HADOOP (Upload File)*\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "• Upload `ordering\\_detail...csv` → hourly RE + daily RE&PS\n"
-        "• `/closinghadoop DD-MM-YYYY` → closing Hadoop\n"
-        "• `/dailyreps` → ulang laporan daily RE&PS\n"
-        "• `/closingdaily DD-MM-YYYY` → closing daily RE&PS\n\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "🔴 *LIVE DB (Otomatis dari MySQL)*\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "• `/liveupdate` → ambil dari DB sekarang (dashboard\\_hourly\\_sales, WOK baru)\n"
-        "• `/liveupdate_wa [chat_id]` → kirim liveupdate (dashboard\\_hourly\\_sales) ke WhatsApp via WAHA\n"
-        "• `/liveupdateutoip` → backup /liveupdate, sumber FMC API\n"
-        "• `/liveupdatebk` → backup /liveupdate, dihitung ulang dari raw ordering\\_detail\n"
-        "• `/closingsql DD-MM-YYYY` → closing dari DB\n"
-        "• `/closingsql_wa DD-MM-YYYY [chat_id]` → kirim closing DB ke WhatsApp via WAHA\n"
-        "• `/closingutoip DD-MM-YYYY` → backup /closingsql, sumber FMC API\n"
-        "• `/closingbk DD-MM-YYYY` → backup /closingsql, dihitung ulang dari raw ordering\\_detail\n"
-        "• ⏰ Auto kirim: 07:30, 08:30 ... 20:30 WIB\n\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "📊 *C3MR / DJP / MB / CAPS*\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "• `/c3mr DD-MM-YYYY` → C3MR Early Tenure/All LOS per WOK + per City + per LOS group (3 gambar)\n"
-        "• `/c3mr10s DD-MM-YYYY` → C3MR per Customer Segment (12 segment)\n"
-        "• `/c3mrSVP DD-MM-YYYY` → C3MR Fokus SVP (Pelanggan LOS <=24 Bulan) per WOK/Branch + per City, "
-        "caption Top 3 & Bottom 3 WOK. ⏰ Auto kirim topic COLLECTION 13:15 WIB, setelah c3mr10s\n"
-        "• `/c3mrnew DD-MM-YYYY` → C3MR New Sales per BILL (BILL-1 s/d BILL-6)\n"
-        "• `/c3mrnewch DD-MM-YYYY` → C3MR LoS 0-6 Bulan (Total + BILL-1 s/d BILL-6), "
-        "dikelompokkan per *Channel Group* (Agency/Grapari/B2B2C\\&Others/Sobi Affiliate/"
-        "Web\\&App) — sama persis rumus `/c3mrnew`. ⏰ Auto kirim topic COLLECTION 13:15 "
-        "WIB setiap hari, langsung setelah c3mrnew\n"
-        "• `/payment DD-MM-YYYY` → Raw data payment C3MR (CSV: bb\\_id, account\\_num, payment\\_date, clearing\\_amount, payment\\_amount)\n"
-        "• `/djp DD-MM-YYYY` → Evaluasi Aktivitas DJP SF\n"
-        "• `/djpcsv DD-MM-YYYY` → Laporan DJP dari CSV manual\n"
-        "• `/mbcsv DD-MM-YYYY` → Laporan Morning Briefing dari CSV manual\n"
-        "• `/childps [DD-MM-YYYY]` → Child per PS Telkomsel One by WOK (jadwal 08.00 topic GTM; bisa juga kirim file SQL .csv/.zip dgn caption /childps)\n"
-        "• `/caps DD-MM-YYYY` → Laporan CAPS: per LOS + per Customer Segment + by Channel + by Reason (4 gambar)\n"
-        "• `/pranpcall [DD-MM-YYYY]` → Recovery Rate (SSL) PraNPC All WO per WOK (DB Indiana). Kosong = data terakhir\n"
-        "• `/pranpcagent [DD-MM-YYYY]` → Report PraNPC per Channel Agent (Agency/SP, CTB, Freelance, OBC) per WOK. Kosong = data terakhir\n"
-        "• `/moretensi [DD-MM-YYYY]` → Retensi PraNPC All LoS per WOK: MO Retensi CTB/Non CTB/Prepaid, Ach, DO, New CT0. Kosong = data terakhir\n"
-        "• `/pranpcsp [DD-MM-YYYY]` → PraNPC Agency & Super Partner per WOK: %RR SSL/Rp, %Caring, %Visit, %Contacted, MoM Paid. Kosong = data terakhir\n"
-        "• `/pranpcprio [DD-MM-YYYY]` → PraNPC by Prioritas (Branch x P1/P2/P3/TACTICAL): %RR, %Caring, %Visit, %Contacted. Kosong = data terakhir\n"
-        "• `/dod DD-MM-YYYY` → PS Harian & %DoD PS per BRANCH/WOK (2 gambar)\n"
-        "• `/promo [DD-MM-YYYY]` → PS Paket One Dynamic: Branch + WOK + City (1 gambar gabungan). Kosong = H-1\n"
-        "• `/sf DD-MM-YYYY` → SF Performance channel AGENCY (SF Aktif PS, Total PS, Productivity)\n"
-        "• `/5so [DD-MM-YYYY]` → 5SO Scorecard: SF Registered, SF Aktif, SF Produktif, Produktivitas, SF Aktif DJP, ODP Visited per Region/Branch/WOK + Momentum Skor & Status. Kosong = H-1\n"
-        "• `/7so [DD-MM-YYYY]` → 7SO Scorecard basis RE: SF Aktif DJP, ODP Visit, DJP/SF/Day, SF Aktif, SF Produktif, Produktivitas, SF Registered (SF Aktif/Produktif/Produktivitas dari RE) per Region/Branch/WOK + Momentum Skor & Status, lalu Excel SF Belum RE MTD (termasuk yang belum RE M1) dan Excel *5SO 7SO per SF + RAW* (dengan Team Leader; `/7so DD-MM-YYYY raw` = hanya Excel ini). Kosong = H-1\n"
-        "• `/pdd DD-MM-YYYY` → PDD per BRANCH/WOK (SF Active, TRX & Kontribusi per Channel)\n"
-        "• `/homepass DD-MM-YYYY` → Homepass Report per WOK/BRANCH (IO/RE/PS Home ID, SF Active) "
-        "+ breakdown per STO per 2 branch (total 4 gambar)\n"
-        "• `/homepass_wok_old DD-MM-YYYY` → sama seperti /homepass tapi pakai struktur WOK lama (16 WOK). ⏰ Auto-report sementara memakai perintah ini\n"
-        "• `/addon DD-MM-YYYY` → Laporan Addon FTTR/IP Camera/Mesh Wifi per BRANCH/WOK "
-        "(2 bulan penuh + MTD, YTD, %Contr, ACH to Target)\n"
-        "• `/klaim` → Rekap Data Pelanggan Klaim per Nama Program "
-        "(dari resources/klaim/Rekap Data Pelanggan Klaim.xlsx, Paid Flag live dari DB, 3 gambar + raw file unpaid)\n"
-        "• `/leads` → Progress Caring Leads IO (login jatenggayeng.id menu Caring Order, "
-        "PNG Summary per WOK-Agency + caption Total Potensi Order belum caring & 3 WOK "
-        "Progress Caring terendah). ⏰ Auto kirim topic GTM 08:00 WIB\n"
-        "• `/salahtagging DD-MM-YYYY` → Monitoring RE Fallout Salah Tagging/Salah Homepass "
-        "per WOK/BRANCH (Agency/Non Agency/All Channel)\n"
-        "• `/salahtagging_wok_old DD-MM-YYYY` → sama seperti /salahtagging tapi pakai struktur WOK lama (16 WOK). ⏰ Auto-report sementara memakai perintah ini\n"
-        "• `/agresif DD-MM-YYYY` → Report Kec Agresif *LITE* (2 gambar): NEW SALES LOKASI "
-        "AGRESIF + NEW SALES ALL FMC CITY. Kolom ringkas NO/BRANCH/CITY/KECAMATAN + "
-        "RE M-1/M + MoM RE + PS M-1/M + MoM PS + TARGET + ACH (level total). Caption = "
-        "TOP ACH / TOP MoM / Worst MoM PS. RAW & target sama spt sebelumnya (`/target` "
-        "upload atau file lokal `template\\_target\\_2026\\_bot...xlsx` terbaru). Versi 3-report "
-        "full untuk sementara dinonaktifkan\n"
-        "• `/agresif_wa DD-MM-YYYY [chat_id]` → kirim Report Kec Agresif ke WhatsApp via WAHA\n"
-        "• `/wireless DD-MM-YYYY` → Performance MtD IO-RE-PS *EZNet Wireless* per WOK/BRANCH "
-        "(produk yang product\\_commercial\\_name-nya mengandung WIRELESS; format sama spt "
-        "Performance MtD by WOK tanpa kolom Revenue). Target dari sheet `TARGET\\_WIRELESS` "
-        "(`/target` upload atau file lokal terbaru). ⏰ Auto kirim topic SALES 07:30 WIB "
-        "setelah agresif\n"
-        "• `/wirelesschannel DD-MM-YYYY` → *PS EZNet Wireless Jateng-DIY by Channel* (SF Household, SF Mobile, "
-        "Grapari, Digital, Community; MtD + MoM). Mapping sf\\_code Household/Mobile dari file "
-        "terbaru di folder `reports/wireless\\_channel/mapping/` (timpa file untuk update). ⏰ Auto kirim topic SALES "
-        "07:30 WIB setelah `/wireless`\n"
-        "• `/jadwal` → Daftar jadwal laporan otomatis yang aktif (jam, topic/WhatsApp) beserta report yang dikirim\n"
-        "• `/reports\\_schedule` → Jadwal report otomatis yang aktif dalam bentuk *gambar 3 tabel* (Telegram tiap hari, WhatsApp, tiap Senin; berisi jam, topic, isi report, data H-n)\n"
-        "• `/kategoripaket DD-MM-YYYY` → Sales by Kategori Paket IndiHome Jateng-DIY "
-        "(Tsel One, EZnet, IH Reguler; MtD, MoM, Cont, MoM Cont). Sebelumnya ikut di "
-        "`/closingsql`, sekarang dipisah\n"
-        "• `/msbranch [DD-MM-YYYY]` → *Market Share FBB per Branch* Jateng-DIY (sumber fixed\\_ms\\_branch)\n"
-        "• `/ms [DD-MM-YYYY]` → *Market Share FBB per City* Jateng-DIY + *MOM Growth* (2 gambar; TSEL Group, "
-        "WoW/MoM/YoY, Status). Tanpa tanggal = update terakhir tabel; dgn tanggal = event date terbaru yang <= tanggal itu. "
-        "⏰ Auto cek tiap hari 10:00 WIB, kirim ke topic Market Share kalau ada update baru\n"
-        "• `/wireless2 DD-MM-YYYY` → sama spt `/wireless` tapi *tanpa produk Murmer* (EZNet Wireless non-Murmer). ⏰ Auto kirim topic SALES 07:30 WIB (menggantikan `/wireless`)\n"
-        "• `/wirelesschannel2 DD-MM-YYYY` → sama spt `/wirelesschannel` tapi *tanpa produk Murmer*. ⏰ Auto kirim topic SALES 07:30 WIB setelah `/wireless2` (menggantikan `/wirelesschannel`)\n"
-        "• `/clockin_sf_teritory [DD-MM-YYYY]` → *Report Clock-in SF Teritory* MTD (gambar + teks + Excel) dari file detail-homepass hasil scraping SELA. Kosong = H-1\n"
-        "• `/clockin_sf_all [DD-MM-YYYY]` → *Report Clock-In SF All Category* MTD: SF Assign DJP, SF Clockin DJP, Clock-in ODP & Homepass seluruh SF terdaftar per WOK (gambar + teks + Excel). Kosong = H-1\n"
-        "• `/homepass_raw [DD-MM-YYYY]` → kirim file detail-homepass mentah, caption `Raw Data Clockin Homepass MTD <tgl>`\n"
-        "• `/murmer [DD-MM-YYYY] [raw]` → Report EZNet Wireless *Murmer* (Daily/MTD/YTD per Region "
-        "+ %Ach YTD vs target, ranking di caption). Kosong = H-1. Dikirim HANYA ke chat yang "
-        "menjalankan, tidak disalin ke grup manapun. *Hari Senin* otomatis disusul data raw JATENG-DIY (xlsx); "
-        "tambah `raw` untuk minta raw di hari lain\n"
-        "• Kirim file *Approve-Tugas* DJP (caption `/djpprio` atau reply pesannya dgn "
-        "`/djpprio [DD-MM-YYYY]`) → Report DJP ODP Priority: %Visit ODP per WOK & Branch "
-        "(1 gambar + caption). Master WL ODP auto-pick file `resources/djp_priority/DJP ODP Priority - "
-        "<Bulan> <Tahun>.xlsx` terbaru\n"
-        "• Kirim sampai 6 file sekaligus (PS apple-to-apple + approve-tugas + opsional "
-        "Data SF Master, DAN/ATAU 3 file SAPA: Assignment + Survey + Prospect Homepass) "
-        "dengan caption `/performance [DD-MM-YYYY]` → SF Performance Tracking Process, "
-        "Result & Daily Monitoring (7 gambar + caption) dan/atau Report SAPA (1 gambar + "
-        "caption), independen sesuai file yang dikirim. NATIVE — jalan dari HTML asli "
-        "`resources/performance/SF\\_Performance\\_Report\\_22.html` lewat headless browser (pixel-perfect, "
-        "bukan reimplementasi). All Parameter WOW/MoM, PDF gabungan & Excel drill-down "
-        "menyusul\n\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "⚙️ *UTILITAS*\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "• `/status` → cek status bot & data tersimpan\n"
-        "• `/dbstatus` → cek koneksi database\n"
-        "• `/dbinfo` → cek update terakhir data di DB\n"
-        "• `/gp` → cek status & coba nyambungin GlobalProtect VPN di server\n"
-        "• `/target` → lihat target RE per WOK\n"
-        "• `/menu` → tampilkan menu ini\n"
-        "• `/start` → panduan lengkap"
+    """
+    /menu — Tampilkan daftar command secara ringkas dari tabel SQLite `bot_commands`.
+    Gunakan `/menu help <command>` atau `/<command> help` untuk melihat detail lengkap.
+    """
+    from telegram.constants import ParseMode
+    from utils.command_registry import (
+        build_command_help_text,
+        build_concise_menu_text,
+        get_command_from_db,
     )
 
-    # Telegram menolak sendMessage kalau teks > 4096 karakter (menu ini sudah
-    # kelewat limit itu tanpa error apa pun ke user — command jadi diam total).
-    # Pecah jadi beberapa pesan di batas paragraf terdekat kalau kepanjangan.
+    raw_args = [a.strip() for a in (ctx.args or []) if a.strip()]
+    teks = ""
+    if not raw_args:
+        teks = build_concise_menu_text()
+    else:
+        first = raw_args[0].lower().lstrip("/")
+        if first in ("help", "?", "--help", "-h"):
+            if len(raw_args) >= 2:
+                target_cmd = raw_args[1].lower().lstrip("/")
+                teks = build_command_help_text(target_cmd)
+            else:
+                teks = build_command_help_text("menu")
+        elif len(raw_args) >= 2 and raw_args[1].lower() in ("help", "?", "--help", "-h"):
+            teks = build_command_help_text(first)
+        elif get_command_from_db(first) is not None:
+            teks = build_command_help_text(first)
+        else:
+            teks = build_concise_menu_text(category_filter=first)
+
     LIMIT = 4096
     if len(teks) <= LIMIT:
-        await update.message.reply_text(teks, parse_mode="Markdown")
+        await update.message.reply_text(teks, parse_mode=ParseMode.HTML)
         return
 
     sisa = teks
     while sisa:
         if len(sisa) <= LIMIT:
-            await update.message.reply_text(sisa, parse_mode="Markdown")
+            await update.message.reply_text(sisa, parse_mode=ParseMode.HTML)
             break
         batas = sisa.rfind("\n\n", 0, LIMIT)
         if batas <= 0:
             batas = sisa.rfind("\n", 0, LIMIT)
         if batas <= 0:
             batas = LIMIT
-        await update.message.reply_text(sisa[:batas], parse_mode="Markdown")
+        await update.message.reply_text(sisa[:batas], parse_mode=ParseMode.HTML)
         sisa = sisa[batas:].lstrip("\n")
-
 
 
 async def job_kirim_terjadwal(context: ContextTypes.DEFAULT_TYPE):
@@ -3451,6 +3349,8 @@ async def _cegat_mode_query(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
     kata = msg.text.split()
     nama = kata[0][1:].split("@")[0].lower()
+    if any(a.strip().lower() in ("help", "?", "--help", "-h", "list") for a in kata[1:]):
+        return
     if nama not in mode_query.DIDUKUNG_RAJAWALI or mode_query.ambil() == "langsung":
         return
     if nama == "caps" and not any(re.fullmatch(r"\d{2}-\d{2}-\d{4}", a) for a in kata[1:]):

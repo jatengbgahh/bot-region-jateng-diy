@@ -262,6 +262,57 @@ def update_job_time(job_id: int, jam: int, menit: int, hari: Optional[str] = Non
         return cur.rowcount > 0
 
 
+def add_job(
+    jam: int,
+    menit: int,
+    topic: str,
+    laporan: list[list[Any]],
+    hari: Optional[str] = None,
+    kirim_wa: bool = False,
+    label: Optional[str] = None,
+) -> int:
+    """Tambahkan slot jadwal baru ke database SQLite dan kembalikan ID job baru."""
+    init_db()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    topic_norm = topic.strip().upper()
+    hari_norm = hari.strip().upper() if hari else None
+    job_label = label or (
+        f"{topic_norm} {hari_norm.capitalize() + ' ' if hari_norm else ''}{jam:02d}:{menit:02d}"
+    )
+    with _get_connection() as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT INTO scheduled_jobs (
+                label, jam, menit, hari, topic, reports_json, kirim_wa, is_active, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?);
+            """,
+            (
+                job_label,
+                int(jam),
+                int(menit),
+                hari_norm,
+                topic_norm,
+                json.dumps(laporan),
+                1 if kirim_wa else 0,
+                now_str,
+                now_str,
+            ),
+        )
+        con.commit()
+        return int(cur.lastrowid)
+
+
+def delete_job(job_id: int) -> bool:
+    """Hapus satu slot jadwal dari database SQLite berdasarkan ID."""
+    init_db()
+    with _get_connection() as con:
+        cur = con.cursor()
+        cur.execute("DELETE FROM scheduled_jobs WHERE id = ?;", (job_id,))
+        con.commit()
+        return cur.rowcount > 0
+
+
 def record_log_start(
     job_id: Optional[int],
     report_name: str,

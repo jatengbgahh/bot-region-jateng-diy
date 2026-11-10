@@ -1181,6 +1181,28 @@ def main_auto(headless=False):
         auth.close()
 
 
+def main_browser_only():
+    """Hanya buka browser Chrome SELA (untuk login / cek sesi) tanpa menjalankan proses scraping."""
+    print("\n" + "=" * 62)
+    print("  MODE BROWSER SELA (Hanya Buka Chrome & Simpan Sesi Login)")
+    print("=" * 62)
+    auth = SfAuth(headless=False).open()
+    try:
+        key_hex = auth.ensure_ready(wait_seconds=1800)
+        if key_hex:
+            save_aes_key(key_hex)
+            print("  [OK] Sesi login & kunci AES berhasil disimpan.")
+        print("\n  Browser Chrome sedang terbuka.")
+        print("  Tekan ENTER di terminal ini kapan saja untuk menyimpan sesi & menutup Chrome...")
+        try:
+            input()
+        except (EOFError, KeyboardInterrupt):
+            pass
+        return True
+    finally:
+        auth.close()
+
+
 def main_manual():
     """Mode MANUAL: paste curl + kunci AES dari config/snippet."""
     key = obtain_aes_key()
@@ -1236,6 +1258,8 @@ def parse_args():
     )
     parser.add_argument("--auto", action="store_true",
                         help="Mode otomatis via browser Playwright (tangkap token & kunci AES sendiri)")
+    parser.add_argument("--browser", "--login", dest="browser_only", action="store_true",
+                        help="Hanya buka jendela Chrome SELA (untuk login/cek sesi) tanpa menjalankan scraping")
     parser.add_argument("--headless", action="store_true",
                         help="Browser berjalan di background tanpa jendela GUI (khusus --auto)")
     parser.add_argument("--size", type=int, default=None,
@@ -1278,6 +1302,8 @@ def main():
     if args.refresh_visits:
         os.environ["DIGIPOS_SF_REFRESH_VISITS"] = "1"
 
+    if args.browser_only:
+        return main_browser_only()
     return main_auto(headless=args.headless) if args.auto else main_manual()
 
 
